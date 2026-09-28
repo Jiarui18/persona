@@ -33,13 +33,14 @@ Pydantic AI framework cuz it MOGS openai sdk.
 
 The app uses PydanticAI with OpenAI for text and a direct OpenAI Realtime sideband for speech, with one shared chatbot identity, prompt set, and saved context. Postgres keeps the profile, onboarding JSON, and completed text/voice turns. The frontend has no simulator controls. There is no Google connector or task execution in this onboarding demo.
 
-Create the local test account once (already created in this checkout):
+Create a local test account, then add more with different usernames:
 
 ```sh
 python3 backend/create_test_account.py
+python3 backend/create_test_account.py reviewer
 ```
 
-That script prints a random password and saves only its PBKDF2 hash and a session-signing secret in `backend/.env.local` (ignored by Git). If the file exists, it refuses to replace the account. To use the existing local account, ask the project owner for its password; do not commit the local env file.
+The script prints each new password once and saves only PBKDF2 hashes in `TEST_ACCOUNTS_JSON` inside `backend/.env.local` (ignored by Git). Each username has its own conversation. Adding an account preserves existing accounts and converts the old single-account env format if present. Restart the backend after adding accounts; keep passwords outside the repo.
 
 Set one key in `backend/.env.local` for both text and live calls:
 
@@ -71,7 +72,7 @@ Open `http://localhost:3000`. The Next.js `/api` route forwards requests to `BAC
 ## Deploy
 
 1. Deploy `frontend/` to Vercel. Set `BACKEND_URL` to the Railway backend HTTPS URL.
-2. Deploy `backend/` to Railway with one worker and a Railway Postgres service. Set `DATABASE_URL`, `OPENAI_API_KEY`, `TEST_USERNAME`, `TEST_PASSWORD_HASH`, `SESSION_SECRET`, and `FRONTEND_ORIGIN` (the Vercel HTTPS origin). Do not copy the local `DATABASE_URL` to production.
-3. Use a generated PBKDF2 hash and random session secret for the deployed test account. The one-off account script shows the format; keep the plaintext password outside the repo. HTTPS is required for microphone access on a non-local domain.
+2. Deploy `backend/` to Railway with one worker and a Railway Postgres service. Set `DATABASE_URL`, `OPENAI_API_KEY`, `TEST_ACCOUNTS_JSON`, `SESSION_SECRET`, and `FRONTEND_ORIGIN` (the Vercel HTTPS origin). Copy the JSON value from the local env file if using those test accounts; do not copy the local `DATABASE_URL` to production.
+3. Keep the plaintext test passwords outside the repo. HTTPS is required for microphone access on a non-local domain.
 
-The gate uses one local test account, an HTTP-only signed cookie, and five failed login attempts per IP per 15 minutes in the single backend process. Restarting the process resets the in-memory attempt counter. Database schema is created at startup. The production domain and live API/WebRTC behavior still need verification after the key is configured.
+The gate uses hashed test accounts, separate conversations per username, an HTTP-only signed cookie, and five failed login attempts per IP per 15 minutes in the single backend process. Restarting the process resets the in-memory attempt counter. Database schema is created at startup. The production domain and live API/WebRTC behavior still need verification after the key is configured.

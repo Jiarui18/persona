@@ -3,6 +3,7 @@ import base64
 import binascii
 import hashlib
 import hmac
+import json
 import os
 import time
 from collections import defaultdict, deque
@@ -15,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env.local"))
+ACCOUNTS = json.loads(os.getenv("TEST_ACCOUNTS_JSON", "{}"))
 import chat
 import realtime
 import store
@@ -24,12 +26,12 @@ LOCKS = defaultdict(asyncio.Lock)
 
 
 def credentials_ready():
-    return all(os.getenv(key) for key in ("TEST_USERNAME", "TEST_PASSWORD_HASH", "SESSION_SECRET"))
+    return bool(ACCOUNTS and os.getenv("SESSION_SECRET"))
 
 
-def password_matches(password):
+def password_matches(password, stored_hash):
     try:
-        algorithm, rounds, salt, expected = os.environ["TEST_PASSWORD_HASH"].split("$")
+        algorithm, rounds, salt, expected = stored_hash.split("$")
         if algorithm != "pbkdf2_sha256":
             return False
         actual = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(rounds))
@@ -51,7 +53,7 @@ def read_session(token):
         mac = base64.urlsafe_b64decode(mac_b64.encode())
         expected = hmac.new(os.environ["SESSION_SECRET"].encode(), payload, hashlib.sha256).digest()
         username, expires = payload.decode().rsplit(":", 1)
-        if hmac.compare_digest(mac, expected) and int(expires) > time.time() and username == os.getenv("TEST_USERNAME"):
+        if hmac.compare_digest(mac, expected) and int(expires) > time.time() and username in ACCOUNTS:
             return username
     except (ValueError, UnicodeDecodeError, binascii.Error):
         pass
@@ -72,7 +74,7 @@ async def account(request: Request):
 @asynccontextmanager
 async def lifespan(_app):
     if not credentials_ready():
-        raise RuntimeError("Configure TEST_USERNAME, TEST_PASSWORD_HASH and SESSION_SECRET")
+        raise RuntimeError("Configure TEST_ACCOUNTS_JSON and SESSION_SECRET")
     await store.initialize()
     yield
     await realtime.stop_all()
@@ -109,7 +111,7 @@ async def login(body: Login, request: Request, response: Response):
         attempts.popleft()
     if len(attempts) >= 5:
         raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
-    if body.username != os.getenv("TEST_USERNAME") or not password_matches(body.password):
+    if not password_matches(body.password, ACCOUNTS.get(body.username, "")):
         attempts.append(now)
         raise HTTPException(401, "Invalid username or password")
     attempts.clear()
