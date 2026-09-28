@@ -1,0 +1,1 @@
+Ask exactly “what would you like to call me?” This asks for the assistant's name, not the user's name. Do not greet or introduce your capabilities yet. Use the current saved state.

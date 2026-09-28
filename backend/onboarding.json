@@ -1,0 +1,15 @@
+{
+  "profile": {"AIname": null, "UserName": null, "Usergmail": null},
+  "onboarding": {
+    "onboarded": false,
+    "WantsCall": null,
+    "CurrentObjective": "AIname",
+    "HelpRequest": null,
+    "GoogleProducts": {},
+    "Objectives": {"AIname": "pending", "GetCall": "pending", "UserName": "pending", "IntroducePersona": "pending", "GetTask": "pending", "GetGoogleUsage": "pending"},
+    "CompletionReason": null
+  },
+  "objective_order": ["AIname", "GetCall", "UserName", "IntroducePersona", "GetTask", "GetGoogleUsage"],
+  "statuses": ["pending", "done", "declined", "deferred"],
+  "completion_reasons": ["all_resolved", "early_value", "user_requested"]
+}
